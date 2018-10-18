@@ -1,5 +1,7 @@
 package com.example.chat.config;
 
+import com.example.chat.config.Intercptor.UserInterceptor;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.converter.MessageConverter;
 import org.springframework.messaging.handler.invocation.HandlerMethodArgumentResolver;
@@ -24,6 +26,7 @@ public class WebSocketStomp implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
+        //这里是绑定代理的路径可以绑定/topic 与/queue
         registry.enableStompBrokerRelay("/topic", "/queue")
                 .setRelayHost("192.168.100.99")
                 .setRelayPort(61613)
@@ -35,7 +38,11 @@ public class WebSocketStomp implements WebSocketMessageBrokerConfigurer {
 				.setHeartbeatValue(new long[] {10000l, 10000l})
 				.setTaskScheduler(new DefaultManagedTaskScheduler());*/
         //配置前缀, 有这些前缀的会被到有@SubscribeMapping与@MessageMapping的业务方法拦截
+
+        //可以这么理解，这里是发送到系统的url前缀，客户端发送到系统都需要这个，系统接受可以省略
         registry.setApplicationDestinationPrefixes("/app");
+        //这里是发送给用户的url前缀，用户订阅相应路径需要，系统发送给用户可以不需要这个，默认为user
+        //registry.setUserDestinationPrefix("/user");
     }
 
     @Override
@@ -44,6 +51,7 @@ public class WebSocketStomp implements WebSocketMessageBrokerConfigurer {
                 .corePoolSize(32)
                 .maxPoolSize(200)
                 .queueCapacity(10000);
+        registration.interceptors(createUserInterceptor());
     }
 
     @Override
@@ -60,4 +68,8 @@ public class WebSocketStomp implements WebSocketMessageBrokerConfigurer {
                 .setSendBufferSizeLimit(512*1024);
     }
 
+    @Bean
+    public UserInterceptor createUserInterceptor(){
+        return new UserInterceptor();
+    }
 }

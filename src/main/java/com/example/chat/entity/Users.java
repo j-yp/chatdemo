@@ -1,9 +1,10 @@
 package com.example.chat.entity;
 
 import java.io.Serializable;
+import java.security.Principal;
 import java.util.Date;
 
-public class Users implements Serializable {
+public class Users implements Serializable, Principal {
     private String id;
     private String name;
     private String password;
@@ -75,5 +76,9 @@ public class Users implements Serializable {
 
     public void setUpdateMan(String updateMan) {
         this.updateMan = updateMan;
+    }
+
+    public Users(String name) {
+        this.name = name;
     }
 }
