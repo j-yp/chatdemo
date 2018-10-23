@@ -4,7 +4,11 @@ import java.io.Serializable;
 import java.util.Date;
 
 public class Contact implements Serializable {
-    private String id;
+    /**
+	 * 
+	 */
+	private static final long serialVersionUID = -1654725042972327005L;
+	private String id;
     private String userId;
     private String contactId;
     private Date insertTime;

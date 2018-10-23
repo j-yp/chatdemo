@@ -5,7 +5,11 @@ import java.security.Principal;
 import java.util.Date;
 
 public class Users implements Serializable, Principal {
-    private String id;
+    /**
+	 * 
+	 */
+	private static final long serialVersionUID = 143838051552016522L;
+	private String id;
     private String name;
     private String password;
     private String userNumber;
@@ -78,7 +82,4 @@ public class Users implements Serializable, Principal {
         this.updateMan = updateMan;
     }
 
-    public Users(String name) {
-        this.name = name;
-    }
 }
