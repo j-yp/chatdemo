@@ -1,46 +1,44 @@
 package com.example.chat.config.handler;
 
+import com.example.chat.config.resource.StompUserResource;
+import com.example.chat.config.utils.PackageUtil;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.MessageChannel;
+import org.springframework.messaging.MessagingException;
+import org.springframework.messaging.SubscribableChannel;
+import org.springframework.messaging.handler.DestinationPatternsMessageCondition;
+import org.springframework.messaging.simp.SimpMessageSendingOperations;
+import org.springframework.messaging.simp.annotation.support.SimpAnnotationMethodMessageHandler;
+import org.springframework.messaging.support.MessageBuilder;
+import org.springframework.messaging.support.MessageHeaderAccessor;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.springframework.beans.factory.InitializingBean;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationContextAware;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.lang.Nullable;
+public class StompAnnotationMethodHandler extends SimpAnnotationMethodMessageHandler {
+	/**
+	 * Create an instance of SimpAnnotationMethodMessageHandler with the given
+	 * message channels and broker messaging template.
+	 *
+	 * @param clientInboundChannel  the channel for receiving messages from clients (e.g. WebSocket clients)
+	 * @param clientOutboundChannel the channel for messages to clients (e.g. WebSocket clients)
+	 * @param brokerTemplate        a messaging template to send application messages to the broker
+	 */
+	public StompAnnotationMethodHandler(SubscribableChannel clientInboundChannel, MessageChannel clientOutboundChannel, SimpMessageSendingOperations brokerTemplate) {
+		super(clientInboundChannel, clientOutboundChannel, brokerTemplate);
+	}
 
-import com.example.chat.config.resource.StompUserResource;
-import com.example.chat.config.utils.PackageUtil;
 
-@Configuration
-public class StompAnnotationMethodHandler implements ApplicationContextAware, InitializingBean{
-	private ApplicationContext applicationContext;
-	
-	protected final Log logger = LogFactory.getLog(getClass());
 	@Autowired
 	private StompUserResource stompUserResource;
-	
-	@Override
-	public void setApplicationContext(@Nullable ApplicationContext applicationContext) {
-		this.applicationContext = applicationContext;
-	}
-
-	@Nullable
-	public ApplicationContext getApplicationContext() {
-		return this.applicationContext;
-	}
 
 	private List<Class<?>> annoTypes;
-	
+
+
 	public List<Class<?>> getAnnoTypes(){
-		if(this.annoTypes == null) {
-			this.setAnnoTypes(this.getAnnoTationPackageClasses());
-		}
 		return annoTypes;
 	}
 	
@@ -48,15 +46,12 @@ public class StompAnnotationMethodHandler implements ApplicationContextAware, In
 		this.annoTypes = annoTypes;
 	}
 
-	public List<Class<?>> getAnnoTationPackageClasses(){
+	public List<Class<?>> getAnnotationPackageClasses(){
         List<String> annoPackages = this.stompUserResource.getAnnoPackages();
         List<Class<?>> list = this.getClassesFromPackages(annoPackages);
-        return list.stream().filter(clazz -> {
-        	if(clazz.isAnnotation() && clazz.getName().endsWith("Controller")) {
-        		return true;
-        	}
-        	return false;
-        }).collect(Collectors.toList());
+        return list.stream().filter(clazz ->
+        	clazz.isAnnotation() && clazz.getName().endsWith("Controller"))
+				.collect(Collectors.toList());
     }
 	
 	public List<Class<?>> getClassesFromPackages(List<String> packages){
@@ -82,28 +77,33 @@ public class StompAnnotationMethodHandler implements ApplicationContextAware, In
 	}
 
 	@Override
-	public void afterPropertiesSet() throws Exception {
-		ApplicationContext context = this.getApplicationContext();
-		if (context == null) {
+	public boolean isHandler(Class<?> bean){
+		return this.annoTypes.contains(bean);
+	}
+
+	@Override
+	public void handleMessage(Message<?> message) throws MessagingException {
+		String destination = getDestination(message);
+		if (destination == null) {
 			return;
 		}
-		/*for (String beanName : context.getBeanNamesForType(Object.class)) {
-			if (!beanName.startsWith(SCOPED_TARGET_NAME_PREFIX)) {
-				Class<?> beanType = null;
-				try {
-					beanType = context.getType(beanName);
-				}
-				catch (Throwable ex) {
-					// An unresolvable bean type, probably from a lazy bean - let's ignore it.
-					if (logger.isDebugEnabled()) {
-						logger.debug("Could not resolve target class for bean with name '" + beanName + "'", ex);
-					}
-				}
-				if (beanType != null && isHandler(beanType)) {
-					detectHandlerMethods(beanName);
-				}
-			}
-		}*/
+		String lookupDestination = getLookupDestination(destination);
+		if (lookupDestination == null) {
+			return;
+		}
+
+		MessageHeaderAccessor headerAccessor = MessageHeaderAccessor.getMutableAccessor(message);
+		headerAccessor.setHeader(DestinationPatternsMessageCondition.LOOKUP_DESTINATION_HEADER, lookupDestination);
+		headerAccessor.setLeaveMutable(true);
+		message = MessageBuilder.createMessage(message.getPayload(), headerAccessor.getMessageHeaders());
+
+		if (logger.isDebugEnabled()) {
+			logger.debug("Searching methods to handle " +
+					headerAccessor.getShortLogMessage(message.getPayload()) +
+					", lookupDestination='" + lookupDestination + "'");
+		}
+
+		handleMessageInternal(message, lookupDestination);
+		headerAccessor.setImmutable();
 	}
-	
 }
