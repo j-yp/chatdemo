@@ -43,12 +43,12 @@ public class PackageUtil {
                 continue;
             String type = url.getProtocol();
             if (type.equals("file")) {
-                fileNames.addAll(getClassNameByFile(url.getPath(), childPackage));
+                fileNames.addAll(getClassNameByFile(packageName, url.getPath(), childPackage));
             } else if (type.equals("jar")) {
-                fileNames.addAll(getClassNameByJar(url.getPath(), childPackage));
+                //fileNames.addAll(getClassNameByJar(url.getPath(), childPackage));
+                fileNames.addAll(getClassNameByJars(((URLClassLoader) loader).getURLs(), packagePath, childPackage));
             }
         }
-        fileNames.addAll(getClassNameByJars(((URLClassLoader) loader).getURLs(), packagePath, childPackage));
         return fileNames;
     }
 
@@ -61,7 +61,7 @@ public class PackageUtil {
      * @return 类的完整名称
      * @throws UnsupportedEncodingException
      */
-    private static List<String> getClassNameByFile(String filePath, boolean childPackage) throws UnsupportedEncodingException {
+    private static List<String> getClassNameByFile(String packageName, String filePath, boolean childPackage) throws UnsupportedEncodingException {
         List<String> myClassName = new ArrayList<>();
         filePath = UrlDecode.getURLDecode(filePath);
         File file = new File(filePath);
@@ -71,15 +71,24 @@ public class PackageUtil {
         for (File childFile : childFiles) {
             if (childFile.isDirectory()) {
                 if (childPackage) {
-                    myClassName.addAll(getClassNameByFile(childFile.getPath(), childPackage));
+                    myClassName.addAll(getClassNameByFile(packageName, childFile.getPath(), childPackage));
                 }
             } else {
                 String childFilePath = childFile.getPath();
                 //childFilePath = FileUtil.clearPath(childFilePath);
                 if (childFilePath.endsWith(".class")) {
-                    childFilePath = childFilePath.substring(childFilePath.indexOf("/classes/") + 9, childFilePath.lastIndexOf("."));
-                    childFilePath = childFilePath.replace("/", ".");
-                    myClassName.add(childFilePath);
+                	boolean flag = false;
+                	if(childFilePath.contains("/")) {
+                		childFilePath = childFilePath.substring(childFilePath.lastIndexOf("/") + 1, childFilePath.lastIndexOf("."));                		
+                		flag = true;
+                	}else if(childFilePath.contains("\\")) {
+                		childFilePath = childFilePath.substring(childFilePath.lastIndexOf("\\") + 1, childFilePath.lastIndexOf("."));                		                		
+                		flag = true;
+                	}
+                	if(flag) {
+	                	childFilePath = packageName + "." + childFilePath;
+	                	myClassName.add(childFilePath);
+                	}
                 }
             }
         }
@@ -94,7 +103,8 @@ public class PackageUtil {
      * @return 类的完整名称
      * @throws UnsupportedEncodingException
      */
-    private static List<String> getClassNameByJar(String jarPath, boolean childPackage) throws UnsupportedEncodingException {
+    @SuppressWarnings("resource")
+	private static List<String> getClassNameByJar(String jarPath, boolean childPackage) throws UnsupportedEncodingException {
         List<String> myClassName = new ArrayList<String>();
         String[] jarInfo = jarPath.split("!");
         String jarFilePath = jarInfo[0].substring(jarInfo[0].indexOf("/"));
