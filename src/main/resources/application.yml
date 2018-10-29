@@ -44,5 +44,3 @@ spring:
       database: chat
       uri: mongodb://localhost:27017
       
-stomp:
-  anno-package: com.example.config.anno
