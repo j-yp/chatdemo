@@ -3,6 +3,7 @@ package com.example.test;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import com.example.chat.config.utils.PackageUtil;
@@ -15,6 +16,15 @@ public class PackageTest {
 		List<Class<?>> classes = getClassesFromPackages(packages);
 		System.out.println("size:"+classes.size());
 		classes.forEach(clazz -> System.out.println(clazz.getName()));
+		
+		Map<String, Class<?>> collect = classes.stream().collect(Collectors.toMap(
+        		c -> {
+        			String name = c.getSimpleName(); 
+        			String subName = name.substring(1);
+        			String first = (name.charAt(0)+"").toLowerCase();
+        			return  first + subName.replace("Controller", "");}
+        		, clazz -> clazz));
+		System.out.println(collect);
 	}
 	
 	public static List<Class<?>> getClassesFromPackages1(List<String> packages){
