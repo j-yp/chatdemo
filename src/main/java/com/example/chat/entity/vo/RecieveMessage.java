@@ -1,5 +1,7 @@
 package com.example.chat.entity.vo;
 
+import com.example.chat.entity.vo.Headers.RecieveType;
+
 /**
  * 接收消息的格式
  * @author wisdom
@@ -47,12 +49,4 @@ public class RecieveMessage {
 		this.message = message;
 	}
 	
-	/**
-	 * 消息类型，USER：联系人，GROUP：群
-	 * @author wisdom
-	 *
-	 */
-	public enum RecieveType {
-		USER, GROUP;
-	}
 }
